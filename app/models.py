@@ -15,7 +15,7 @@ class SearchResult(BaseModel):
 
 class ChatRequest(BaseModel):
     question: str
-    max_results: int = 3
+    max_results: int = 30
 
 
 class ChatResponse(BaseModel):

@@ -1,56 +1,211 @@
-# Technical Test: Simple RAG System
+# RAG System API
 
-Welcome! The goal of this challenge is to build a simple Retrieval-Augmented Generation (RAG) system from scratch. You'll create a basic API that can store documents, search for relevant information, and answer questions based on the stored content.
+Sistema de Retrieval-Augmented Generation (RAG) construído com FastAPI, ChromaDB e Google Gemini para busca semântica e geração de respostas baseadas em documentos.
+
+## Tecnologias
+
+- **FastAPI** - Framework web para API
+- **ChromaDB** - Banco de dados vetorial
+- **all-MiniLM-L6-v2** - Modelo de embeddings
+- **Google Gemini** - Modelo de linguagem
+- **LangChain** - Framework para LLM
 
 
-## Core Technologies
+## Instalação
 
-- **ChromaDB** for vector storage
-- **all-MiniLM-L6-v2** for embeddings  
-- **OpenRouter** for LLM responses
+1. Clone o repositório
+2. Crie um ambiente virtual:
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # Linux/Mac
+   # ou
+   venv\Scripts\activate  # Windows
+   ```
 
-## Required Functionalities
+3. Instale as dependências:
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-### 1. Add Documents
-**POST /add_document**
-- Take text input
-- Generate embedding with all-MiniLM-L6-v2
-- Store in ChromaDB
+4. Configure as variáveis de ambiente:
+   - Crie um arquivo `.env` na raiz do projeto
+   - Adicione sua chave da Google AI:
+   ```
+   GOOGLE_API_KEY=sua_chave_da_google_ai_aqui
+   CHROMADB_PATH=./chroma_db
+   EMBEDDING_MODEL=all-MiniLM-L6-v2
+   MODEL_NAME=gemini-2.5-flash
+   ```
 
-### 2. Search  
-**GET /search?query=...**
-- Generate query embedding
-- Find similar documents in ChromaDB
-- Return matches with scores
-
-### 3. RAG Chat
-**POST /chat**
-- Search for relevant context
-- Send context + question to OpenRouter
-- Return answer with sources
-
-## Quick Start
+## Execução
 
 ```bash
-# Install
-pip install -r requirements.txt
-
-# Setup .env
-OPENROUTER_API_KEY=your_key_here
-CHROMADB_PATH=./chroma_db
-EMBEDDING_MODEL=all-MiniLM-L6-v2
-MODEL_SLUG=openai/gpt-3.5-turbo
-
-# Run
-uvicorn app.main:app --reload
+python run_server.py
 ```
 
-## Your Task & Evaluation
+A API estará disponível em `http://localhost:8000`
 
-  * **Implementation**: Your primary task is to complete the logic in the files marked with `TODO` comments (`database.py`, `embeddings.py`, `rag.py`).
-  * **Evaluation**: Your submission will be evaluated on **correctness**, **code quality**, and the application of **software engineering best practices** (e.g., clarity, modularity, error handling, guardrails).
-  * **Freedom**: You are free to add any dependencies you see fit. We want you to use your best judgment as you would on a real project.
+## Endpoints
 
-## Submission
+### 1. Adicionar Documento
+**POST** `/add_document`
 
-To submit, create a new public repository containing your solution and share the link with us. Good luck! 😄
+Adiciona um documento à base de conhecimento.
+
+**Body:**
+```json
+{
+  "text": "Conteúdo do documento",
+  "filename": "documento.txt",
+  "metadata": {}
+}
+```
+
+**Suporte a arquivos:**
+- Texto simples (.txt)
+- PDF (.pdf)
+- Word (.docx, .doc)
+
+**Exemplo com arquivo:**
+```bash
+curl -X POST "http://localhost:8000/add_document" \
+  -H "Content-Type: multipart/form-data" \
+  -F "file=@documento.pdf"
+```
+
+### 2. Buscar Documentos
+**GET** `/search`
+
+Busca documentos similares por consulta semântica.
+
+**Parâmetros:**
+- `query` (string): Consulta de busca
+- `n_results` (int, opcional): Número de resultados (padrão: 10)
+
+**Exemplo:**
+```bash
+curl "http://localhost:8000/search?query=aprendizado%20máquina&n_results=5"
+```
+
+### 3. Chat RAG
+**POST** `/chat`
+
+Gera respostas baseadas nos documentos armazenados.
+
+**Body:**
+```json
+{
+  "question": "Qual é o tema principal do documento?",
+  "max_results": 10
+}
+```
+
+**Resposta:**
+```json
+{
+  "answer": "Resposta gerada pelo modelo...",
+  "sources": [
+    {
+      "document_id": 1,
+      "content": "Trecho relevante...",
+      "similarity_score": 0.85,
+      "metadata": {
+        "filename": "documento.pdf",
+        "chunk_index": 0
+      }
+    }
+  ],
+  "model_used": "gemini-2.5",
+  "tokens_used": 150
+}
+```
+
+### 4. Estatísticas do Banco
+**GET** `/database_stats`
+
+Retorna estatísticas sobre os documentos armazenados.
+
+### 5. Buscar Chunks
+**GET** `/search_chunks`
+
+Busca chunks específicos por consulta (endpoint de debug).
+
+## Funcionalidades
+
+### Busca Semântica
+- Utiliza embeddings para encontrar documentos semanticamente similares
+- Busca por palavras-chave como fallback
+- Filtragem automática por relevância
+
+### Processamento de Documentos
+- Divisão automática em chunks para melhor processamento
+- Suporte a múltiplos formatos de arquivo
+- Metadados preservados para rastreabilidade
+
+### Geração de Respostas
+- Contexto inteligente com chunks adjacentes
+- Respostas baseadas exclusivamente nos documentos
+- Fallback robusto em caso de falhas
+
+## Estrutura do Projeto
+
+```
+llm-rag-test/
+├── app/
+│   ├── __init__.py
+│   ├── config.py          # Configurações
+│   ├── database.py        # Gerenciamento ChromaDB
+│   ├── embeddings.py      # Geração de embeddings
+│   ├── main.py           # API FastAPI
+│   ├── models.py         # Modelos Pydantic
+│   └── rag.py            # Pipeline RAG
+├── requirements.txt       # Dependências
+├── run_server.py         # Script de execução
+└── README.md
+```
+
+## Configuração Avançada
+
+### Modelos de Embedding
+Altere o modelo de embedding no arquivo `.env`:
+```
+EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+```
+
+### Modelo de Linguagem
+Configure o modelo Gemini:
+```
+MODEL_NAME=gemini-2.5-flash
+```
+
+### Caminho do Banco
+Defina onde armazenar o ChromaDB:
+```
+CHROMADB_PATH=./chroma_db
+```
+
+## Limitações
+
+- Máximo de 30 resultados por busca para performance
+- Contexto limitado a 4000 tokens por resposta
+- Requer chave da Google AI para funcionamento
+
+## Troubleshooting
+
+### Erro de API Key
+Certifique-se de que a `GOOGLE_API_KEY` está configurada corretamente no arquivo `.env`.
+
+### Erro de Dependências
+Execute `pip install -r requirements.txt` para instalar todas as dependências.
+
+### Problemas com PDFs
+Verifique se o arquivo PDF não está corrompido e contém texto extraível.
+
+## Desenvolvimento
+
+Para executar em modo de desenvolvimento:
+```bash
+uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+```
+
+A documentação interativa da API estará disponível em `http://localhost:8000/docs`.
