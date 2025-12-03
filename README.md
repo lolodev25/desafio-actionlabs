@@ -208,4 +208,3 @@ Para executar em modo de desenvolvimento:
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-A documentação interativa da API estará disponível em `http://localhost:8000/docs`.
